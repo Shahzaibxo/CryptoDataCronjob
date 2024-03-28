@@ -3,7 +3,7 @@ const { connectToMongoDB } = require('../db/CoindataDB');
 
 
 async function fetchUpdateGainersdata(DataSize) {
-    const { collectionCurrentGain } = await connectToMongoDB();
+    const { collectionCurrentGain, collection15min } = await connectToMongoDB();
     try {
 
         const res = await axios.get(`https://www.kucoin.com/_api/market-front/search?currentPage=1&lang=en_US&pageSize=${DataSize}&sortType=ASC&subCategory=increase&tabType=RANKING`)
@@ -14,20 +14,21 @@ async function fetchUpdateGainersdata(DataSize) {
             lastUSDPrice: parseFloat(eachcoin.lastUSDPrice),
             Icon: eachcoin.iconUrl,
             date: new Date(),
-            new: false
+            new: false,
+            display: true
         }));
 
 
         const arrayofolddata = await collectionCurrentGain.find().toArray()
+        const arrayofolddatafrom15min = await collection15min.find().toArray()
 
         arrayofolddata.sort((a, b) => b.changeinPercentage - a.changeinPercentage);
+        arrayofolddatafrom15min.sort((a, b) => b.changeinPercentage - a.changeinPercentage);
         filteredResponse.sort((a, b) => b.changeinPercentage - a.changeinPercentage);
 
 
-
         const oldcoinNames = [];
-        const UniqueCoinnames = [];
-
+        const min15oldcoinnames = [];
 
         arrayofolddata.forEach(obj => {
             oldcoinNames.push(obj.symbol);
@@ -36,19 +37,34 @@ async function fetchUpdateGainersdata(DataSize) {
         );
         await collectionCurrentGain.deleteMany({})
 
-        filteredResponse.forEach(async (obj) => {
-            if (!oldcoinNames.includes(obj.symbol)) {
-                UniqueCoinnames.push(obj.symbol);
-                obj.new = true
+        filteredResponse.forEach(async(obj1) => {
+            let adjusted = false
 
+            if (!oldcoinNames.includes(obj1.symbol)) {
+                obj1.new = true
             }
-            await collectionCurrentGain.insertOne(obj)
-        })
+
+            arrayofolddatafrom15min.forEach(async (obj) => {
+                min15oldcoinnames.push(obj.symbol)
+                if (obj1.changeinPercentage > obj.changeinPercentage && adjusted === false && !min15oldcoinnames.includes(obj1)) {
+                    adjusted = true
+                    
+                    await collection15min.insertOne(obj1)
+
+                }
+
+                if (obj1.symbol === obj.symbol && adjusted === true) {
+                    await collection15min.deleteOne(obj._id)
+                }
+               
 
 
+            }) // foreach for 15min data
+
+            await collectionCurrentGain.insertOne(obj1)
+        }) // foreach for real time update data
 
 
-       
         console.log("Gain cronjob running")
         return filteredResponse
 
@@ -56,4 +72,4 @@ async function fetchUpdateGainersdata(DataSize) {
         console.log("Error:", error).message;
     }
 }
-module.exports= fetchUpdateGainersdata
+module.exports = fetchUpdateGainersdata

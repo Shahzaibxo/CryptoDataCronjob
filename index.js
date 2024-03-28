@@ -7,8 +7,8 @@ port=3000
 
 app.get('/', async(req, res) => {
     Coindatacron.start()
-    const {collectionCurrentGain, collectionCurrentloss }= await connectToMongoDB()
-    const results= await collectionCurrentGain.find().toArray()
+    const {collection15min, collectionCurrentloss }= await connectToMongoDB()
+    const results= await collection15min.find().toArray()
     res.status(200).json(results)
   })
 

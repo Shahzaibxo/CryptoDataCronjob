@@ -6,7 +6,7 @@ const app = express()
 port = 3000
 
 app.get('/',(req,res)=>{
-  res.status(200).json(testingendpoint)
+  res.status(200).json("testingendpoint")
 })
 app.get('/coindata', async (req, res) => {
   try{

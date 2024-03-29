@@ -3,7 +3,7 @@ const { connectToMongoDB } = require('../db/CoindataDB');
 
 
 async function fetchUpdateGainersdata(DataSize) {
-    const { collectionCurrentGain, collection15min } = await connectToMongoDB();
+    const { collectionCurrentGain } = await connectToMongoDB();
     try {
 
         const res = await axios.get(`https://www.kucoin.com/_api/market-front/search?currentPage=1&lang=en_US&pageSize=${DataSize}&sortType=ASC&subCategory=increase&tabType=RANKING`)
@@ -19,10 +19,8 @@ async function fetchUpdateGainersdata(DataSize) {
 
 
         const arrayofolddata = await collectionCurrentGain.find().toArray()
-        const arrayofolddatafrom15min = await collection15min.find().toArray()
-
+        
         arrayofolddata.sort((a, b) => b.changeinPercentage - a.changeinPercentage);
-        arrayofolddatafrom15min.sort((a, b) => b.changeinPercentage - a.changeinPercentage);
         filteredResponse.sort((a, b) => b.changeinPercentage - a.changeinPercentage);
 
 
@@ -43,31 +41,14 @@ async function fetchUpdateGainersdata(DataSize) {
                 obj1.new = true
             }
 
-            arrayofolddatafrom15min.forEach(async (obj) => {
-                min15oldcoinnames.push(obj.symbol)
-                if (obj1.changeinPercentage > obj.changeinPercentage && adjusted === false && !min15oldcoinnames.includes(obj1)) {
-                    adjusted = true
-                    await collection15min.insertOne(obj1)
-                }
-
-                if (obj1.symbol === obj.symbol && adjusted === true) {
-                    await collection15min.deleteOne({ _id:obj._id})
-                    console.log("duplicate deleting")
-                }
-               
-
-                // console.log(obj)
-            }) // foreach for 15min data
-
             await collectionCurrentGain.insertOne(obj1)
-        }) // foreach for real time update data
-
+        }) 
 
         console.log("Gain cronjob running")
         return filteredResponse
 
     } catch (error) {
-        console.log("Error:", error).message;
+        console.log("Error:", error);
     }
 }
 module.exports = fetchUpdateGainersdata

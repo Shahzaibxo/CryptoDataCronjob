@@ -45,6 +45,7 @@ async function fetchupdatefor12hrs(DataSize) {
                 if (compareFloats(obj1.changeinPercentage, obj.changeinPercentage) && adjusted === false) {
                     if (!min15oldcoinnames.includes(obj1.symbol)) {
                         adjusted = true
+                        obj1.new=true
                         await collection12hrGain.insertOne(obj1)
                     }
 

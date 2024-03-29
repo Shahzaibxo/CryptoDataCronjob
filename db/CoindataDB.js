@@ -1,4 +1,5 @@
 const { MongoClient } = require("mongodb");
+require('dotenv').config()
 
 const Gaincollection = "gainers";
 const Losscollection = "losers";
@@ -6,7 +7,7 @@ const Databasename = "coindata";
 const min15collection="15minOldData"
 const min16collection="12hrloss"
 
-const uri = "mongodb://shahziwork:Uj9riYKOLYZ1uLVp@ac-m3eiggb-shard-00-00.fbmqykm.mongodb.net:27017,ac-m3eiggb-shard-00-01.fbmqykm.mongodb.net:27017,ac-m3eiggb-shard-00-02.fbmqykm.mongodb.net:27017/?ssl=true&replicaSet=atlas-tpiip0-shard-0&authSource=admin&retryWrites=true&w=majority&appName=GmailDb";
+const uri = process.env.DB_URI;
 const client = new MongoClient(uri);
 
 async function connectToMongoDB() {

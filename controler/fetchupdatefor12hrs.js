@@ -2,8 +2,8 @@ const axios = require('axios');
 const { connectToMongoDB } = require('../db/CoindataDB');
 
 
-async function fetchupdatefor15mins(DataSize) {
-    const { collection15min } = await connectToMongoDB();
+async function fetchupdatefor12hrs(DataSize) {
+    const { collection12hrGain } = await connectToMongoDB();
     try {
 
         const res = await axios.get(`https://www.kucoin.com/_api/market-front/search?currentPage=1&lang=en_US&pageSize=${DataSize}&sortType=ASC&subCategory=increase&tabType=RANKING`)
@@ -18,13 +18,13 @@ async function fetchupdatefor15mins(DataSize) {
         }));
 
 
-        await collection15min.deleteMany({
+        await collection12hrGain.deleteMany({
             date: {
                 $lt: new Date(Date.now() - 12 * 60 * 60 * 1000)
             }
         });
 
-        const arrayofolddatafrom15min = await collection15min.find().toArray()
+        const arrayofolddatafrom15min = await collection12hrGain.find().toArray()
 
         arrayofolddatafrom15min.sort((a, b) => b.changeinPercentage - a.changeinPercentage);
         filteredResponse.sort((a, b) => b.changeinPercentage - a.changeinPercentage);
@@ -34,7 +34,7 @@ async function fetchupdatefor15mins(DataSize) {
             let min15oldcoinnames = [];
             let adjusted = false
 
-            const epsilon = 0.00001; // Set a small value for comparison
+            const epsilon = 0.00001; 
 
             function compareFloats(a, b) {
                 return a - b > epsilon;
@@ -45,24 +45,23 @@ async function fetchupdatefor15mins(DataSize) {
                 if (compareFloats(obj1.changeinPercentage, obj.changeinPercentage) && adjusted === false) {
                     if (!min15oldcoinnames.includes(obj1.symbol)) {
                         adjusted = true
-                        await collection15min.insertOne(obj1)
+                        await collection12hrGain.insertOne(obj1)
                     }
 
                 }
 
                 if (obj1.symbol === obj.symbol && adjusted === true) {
-                    await collection15min.deleteOne({ _id: obj._id })
+                    await collection12hrGain.deleteOne({ _id: obj._id })
 
                 }
 
 
-                // console.log(obj)
-            }) // foreach for 15min data
+            })
 
-        }) // foreach for real time update data
+        })
 
 
-        console.log("Gain cronjob running")
+        console.log("Gain 12hr cronjob running")
 
 
     } catch (error) {
@@ -70,4 +69,4 @@ async function fetchupdatefor15mins(DataSize) {
     }
 
 }
-module.exports = fetchupdatefor15mins
+module.exports = fetchupdatefor12hrs

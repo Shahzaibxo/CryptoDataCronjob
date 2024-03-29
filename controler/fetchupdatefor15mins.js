@@ -2,8 +2,8 @@ const axios = require('axios');
 const { connectToMongoDB } = require('../db/CoindataDB');
 
 
-async function fetchUpdateGainersdata(DataSize) {
-    const { collectionCurrentGain, collection15min } = await connectToMongoDB();
+async function fetchupdatefor15mins(DataSize) {
+    const { collection15min } = await connectToMongoDB();
     try {
 
         const res = await axios.get(`https://www.kucoin.com/_api/market-front/search?currentPage=1&lang=en_US&pageSize=${DataSize}&sortType=ASC&subCategory=increase&tabType=RANKING`)
@@ -18,56 +18,56 @@ async function fetchUpdateGainersdata(DataSize) {
         }));
 
 
-        const arrayofolddata = await collectionCurrentGain.find().toArray()
+        await collection15min.deleteMany({
+            date: {
+                $lt: new Date(Date.now() - 12 * 60 * 60 * 1000)
+            }
+        });
+
         const arrayofolddatafrom15min = await collection15min.find().toArray()
 
-        arrayofolddata.sort((a, b) => b.changeinPercentage - a.changeinPercentage);
         arrayofolddatafrom15min.sort((a, b) => b.changeinPercentage - a.changeinPercentage);
         filteredResponse.sort((a, b) => b.changeinPercentage - a.changeinPercentage);
 
 
-        const oldcoinNames = [];
-        const min15oldcoinnames = [];
-
-        arrayofolddata.forEach(obj => {
-            oldcoinNames.push(obj.symbol);
-            obj.new = false
-        }
-        );
-        await collectionCurrentGain.deleteMany({})
-
-        filteredResponse.forEach(async(obj1) => {
+        filteredResponse.forEach(async (obj1) => {
+            let min15oldcoinnames = [];
             let adjusted = false
 
-            if (!oldcoinNames.includes(obj1.symbol)) {
-                obj1.new = true
-            }
+            const epsilon = 0.00001; // Set a small value for comparison
 
+            function compareFloats(a, b) {
+                return a - b > epsilon;
+            }
             arrayofolddatafrom15min.forEach(async (obj) => {
                 min15oldcoinnames.push(obj.symbol)
-                if (obj1.changeinPercentage > obj.changeinPercentage && adjusted === false && !min15oldcoinnames.includes(obj1)) {
-                    adjusted = true
-                    await collection15min.insertOne(obj1)
+
+                if (compareFloats(obj1.changeinPercentage, obj.changeinPercentage) && adjusted === false) {
+                    if (!min15oldcoinnames.includes(obj1.symbol)) {
+                        adjusted = true
+                        await collection15min.insertOne(obj1)
+                    }
+
                 }
 
                 if (obj1.symbol === obj.symbol && adjusted === true) {
-                    await collection15min.deleteOne({ _id:obj._id})
-                    console.log("duplicate deleting")
+                    await collection15min.deleteOne({ _id: obj._id })
+
                 }
-               
+
 
                 // console.log(obj)
             }) // foreach for 15min data
 
-            await collectionCurrentGain.insertOne(obj1)
         }) // foreach for real time update data
 
 
         console.log("Gain cronjob running")
-        return filteredResponse
+
 
     } catch (error) {
-        console.log("Error:", error).message;
+        console.log("Error:", error);
     }
+
 }
-module.exports = fetchUpdateGainersdata
+module.exports = fetchupdatefor15mins
